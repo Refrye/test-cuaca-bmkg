@@ -1,0 +1,101 @@
+<?php
+// URL BMKG yang menyediakan data cuaca
+$url = "https://data.bmkg.go.id/DataMKG/MEWS/DigitalForecast/DigitalForecast-JawaTimur.xml";
+// Mengambil data dari BMKG
+$xml_data = file_get_contents($url);
+if ($xml_data === false) {
+    echo json_encode(array("error" => "Gagal mengambil data cuaca dari BMKG."));
+    exit;
+}
+// Membaca data XML
+$xml = simplexml_load_string($xml_data);
+// Memeriksa apakah parsing XML berhasil
+if ($xml === false) {
+    echo json_encode(array("error" => "Gagal memproses data cuaca dari BMKG."));
+    exit;
+}
+// Mengkonversi data XML ke array asosiatif
+$json = json_encode($xml, JSON_PRETTY_PRINT);
+$data = json_decode($json, true);
+// Memeriksa apakah konversi JSON berhasil
+if ($data === null) {
+    echo json_encode(array("error" => "Gagal mengkonversi data cuaca ke format JSON."));
+    exit;
+}
+header("Content-Type: application/json");
+echo json_encode($data);
+?>
+
+Lorem ipsum dolor sit amet consectetur adipisicing elit. Veniam quam ea autem officiis, omnis inventore pariatur ipsa atque quibusdam eaque. Eveniet quod tempora architecto accusantium, eligendi totam esse aliquam. Aut.
+
+public function update(Request $request, $id) {
+    // define
+    $validator = Validator::make($request->all(), [
+        'title'     => 'required',
+        'content'   => 'required',
+    ]);
+
+    // check if validation fails
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 400);
+    }
+
+    // find post
+    $post = Post::Find($id);
+
+    // handle image upload
+    try {
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $image->storeAs('public/posts', $image->hashName());
+
+            // delete old image if it exists
+            if (Storage::exists('public/posts/' . $post->image)) {
+                Storage::delete('public/posts/' . $post->image);
+            }
+
+            // update post with new image
+            $post->image = $image->hashName();
+        }
+    } catch (Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+
+    // update post without image
+    $post->title = $request->input('title');
+    $post->content = $request->input('content');
+
+    // save post
+    $post->save();
+
+    // return response
+    return new PostResource(true, 'Data Post Berhasil Diubah!', $post);
+    }
+
+    public function destroy($id) {
+    // Find post by ID.
+    $post = Post::find($id);
+
+    // Check if the image exists.
+    if (!Storage::exists('public/posts/' . basename($post->image))) {
+        return new PostResource(false, 'Gambar tidak ditemukan.', null);
+    }
+
+    // Try to delete the image.
+    try {
+        Storage::delete('public/posts/' . basename($post->image));
+    } catch (Exception $e) {
+        return new PostResource(false, 'Gagal menghapus gambar.', null);
+    }
+
+    // Try to delete the post.
+    try {
+        $post->delete();
+    } catch (Exception $e) {
+        return new PostResource(false, 'Gagal menghapus posting.', null);
+    }
+
+    // Return response.
+    return new PostResource(true, 'Data Post Berhasil Dihapus!', null);
+}
+

@@ -1,0 +1,89 @@
+<?php
+// Data kota atau kabupaten di Jawa Timur
+$locations = [
+    'surabaya' => 'Surabaya',
+    'malang' => 'Malang',
+    'kediri' => 'Kediri',
+    'jember' => 'Jember',
+    'probolinggo' => 'Probolinggo',
+    'pasuruan' => 'Pasuruan',
+    'sidoarjo' => 'Sidoarjo',
+    'mojokerto' => 'Mojokerto',
+    'blitar' => 'Blitar',
+    'tulungagung' => 'Tulungagung',
+];
+// Mengambil lokasi yang diminta dari query parameter (misalnya "?location=surabaya")
+$selected_location = isset($_GET['location']) ? $_GET['location'] : '';
+// Memastikan lokasi yang diminta ada dalam data yang tersedia
+if (!array_key_exists($selected_location, $locations)) {
+    die("Lokasi tidak valid.");
+}
+// URL BMKG yang berisi data cuaca
+$bmkg_url = "https://data.bmkg.go.id/DataMKG/MEWS/DigitalForecast/DigitalForecast-JawaTimur.xml";
+// Mengambil data XML dari URL BMKG
+$xml_data = file_get_contents($bmkg_url);
+// Parse data XML
+$xml = simplexml_load_string($xml_data);
+// Ambil informasi cuaca yang diperlukan
+$temperature = $xml->forecast->area[0]->parameter[0]->timerange->value;
+$humidity = $xml->forecast->area[0]->parameter[1]->timerange->value;
+$current_weather = $xml->forecast->area[0]->parameter[2]->timerange->value;
+// Nama lokasi yang dipilih
+$location_name = $locations[$selected_location];
+// Menampilkan hasil dalam format JSON
+$weather_data = [
+    'location' => $location_name,
+    'temperature' => $temperature,
+    'humidity' => $humidity,
+    'current_weather' => $current_weather,
+    // Tambahkan lebih banyak informasi cuaca yang diperlukan sesuai dengan XML BMKG.
+];
+header('Content-Type: application/json');
+echo json_encode($weather_data);
+?>
+
+
+<?php
+// URL BMKG yang menyediakan data cuaca
+$url = "https://data.bmkg.go.id/DataMKG/MEWS/DigitalForecast/DigitalForecast-JawaTimur.xml";
+// Mengambil data dari BMKG
+$xml_data = file_get_contents($url);
+// Memeriksa apakah data berhasil diambil
+if ($xml_data === false) {
+    echo json_encode(array("error" => "Gagal mengambil data cuaca dari BMKG."));
+    exit;
+}
+// Membaca data XML
+$xml = simplexml_load_string($xml_data);
+// Memeriksa apakah parsing XML berhasil
+if ($xml === false) {
+    echo json_encode(array("error" => "Gagal memproses data cuaca dari BMKG."));
+    exit;
+}
+// Daftar lokasi yang ingin Anda seleksi (ganti dengan nama lokasi yang sesuai)
+$lokasi_yang_ingin_ditampilkan = "Kabupaten Mojokerto";
+// Menyaring data cuaca berdasarkan lokasi yang diinginkan
+$cuaca_lokasi = array();
+foreach ($xml->forecast->area as $area) {
+    $nama_area = (string)$area['description'];
+    if ($nama_area === $lokasi_yang_ingin_ditampilkan) {
+        $cuaca_lokasi = $area;
+        break;
+    }
+}
+// Memeriksa apakah lokasi ditemukan
+if (empty($cuaca_lokasi)) {
+    echo json_encode(array("error" => "Lokasi yang diminta tidak ditemukan."));
+    exit;
+}
+// Mengkonversi data cuaca lokasi ke array asosiatif
+$json = json_encode($cuaca_lokasi, JSON_PRETTY_PRINT);
+$data = json_decode($json, true);
+// Memeriksa apakah konversi JSON berhasil
+if ($data === null) {
+    echo json_encode(array("error" => "Gagal mengkonversi data cuaca ke format JSON."));
+    exit;
+}
+header("Content-Type: application/json");
+echo json_encode($data);
+?>
